@@ -1,1 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Distances between Two Cities App</title>
+    <link href="Content/bootstrap.min.css" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <script src="https://kit.fontawesome.com/ab2155e76b.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    <link href="App.css" rel="stylesheet" />
+    <style>
+        #googleMap {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="jumbotron">
+        <div class="container-fluid">
+            <h1>Find The Distance Between Your Location and Destination.</h1>
+            <p>This App Will Help You Calculate Your Travelling Distances.</p>
+            <form class="form-horizontal">
+               <div class="form-group">
+                
+                    <label for="to" class="col-xs-2 control-label"><i class="fas fa-map-marker-alt"></i></label>
+                    <div class="col-xs-4">
+                        <input type="text" id="to" placeholder="Destination" class="form-control">
+                    </div>
+                  
+                 </div>
+                 
+            </form>
+
+            <div class="col-xs-offset-2 col-xs-10">
+                <button class="btn btn-info btn-lg " onclick="startTracking();"><i class="fas fa-map-signs"></i> Start Tracking</button>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div id="googleMap">
+
+            </div>
+            <div id="output">
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="Scripts/jquery-3.1.1.min.js"></script>
+    <script>
+        var map, destMarker, watchID, isTraveling = false;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('googleMap'), {
+                zoom: 12,
+                center: { lat: 0, lng: 0 }
+            });
+
+            destMarker = new google.maps.Marker({
+                map: map,
+                title: 'Destination'
+            });
+        }
+
+        function updateMarkerAndCoordinates(marker, lat, lng) {
+            var pos = { lat: lat, lng: lng };
+            marker.setPosition(pos);
+            return { lat: lat.toFixed(6), lng: lng.toFixed(6) };
+        }
+
+        function fetchPlace(lat, lng, elementId) {
+            var geocoder = new google.maps.Geocoder;
+            var latlng = { lat: parseFloat(lat), lng: parseFloat(lng) };
+            geocoder.geocode({ 'location': latlng }, function (results, status) {
+                if (status === 'OK') {
+                    if (results[0]) {
+                        document.getElementById(elementId).textContent = results[0].formatted_address;
+                    } else {
+                        console.error('No results found');
+                    }
+                } else {
+                    console.error('Geocoder failed due to: ' + status);
+                }
+            });
+        }
+
+        function startTracking() {
+            if (navigator.geolocation) {
+                isTraveling = true;
+                watchID = navigator.geolocation.watchPosition(function (position) {
+                    console.log('Location updated:', position.coords.latitude, position.coords.longitude);
+                    if (isTraveling) {
+                        var lat = position.coords.latitude;
+                        var lng = position.coords.longitude;
+                        var currentCoords = { lat: lat, lng: lng };
+                        map.setCenter(currentCoords);
+                        map.setZoom(15);
+                        updateMarkerAndCoordinates(destMarker, lat, lng);
+                        fetchPlace(lat, lng, 'to');
+                        calculateAndDisplayRoute(currentCoords);
+                    }
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function calculateAndDisplayRoute(currentCoords) {
+            var to = document.getElementById('to').value;
+            var directionsService = new google.maps.DirectionsService();
+            var directionsDisplay = new google.maps.DirectionsRenderer();
+            var request = {
+                origin: currentCoords,
+                destination: to,
+                travelMode: 'DRIVING'
+            };
+            directionsService.route(request, function (result, status) {
+                if (status == 'OK') {
+                    directionsDisplay.setDirections(result);
+                    directionsDisplay.setMap(map);
+                    var leg = result.routes[0].legs[0];
+                    var distance = leg.distance.value / 1000; // in kilometers
+                    document.getElementById('output').innerHTML = '<div class="alert alert-info">Distance from your current location to ' + leg.end_address + ' is ' + leg.distance.text + '</div>';
+                    if (distance < 1) {
+                        playAlarm();
+                    }
+                }
+            });
+        }
+
+        function playAlarm() {
+            var audio = new Audio('alarm.mp3');
+            audio.play();
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAwjNkVZ0mr30RDn-X84NCq7QbfHvUCxMI&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>
 
